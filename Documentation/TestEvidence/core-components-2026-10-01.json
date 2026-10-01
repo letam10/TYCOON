@@ -1,0 +1,372 @@
+{
+  "date": "2026-10-01",
+  "unity": "6000.6.3f1",
+  "renderer": "Null Device",
+  "scope": "component and logic tests only",
+  "runs": [
+    {
+      "file": "TestResults/core-edit-r3.xml",
+      "sha256": "60c571a0bb377bf161763c614bfe09bf2b33eb832d88e08bcb7a0cc99332ccda",
+      "result": "Passed",
+      "total": 53,
+      "passed": 53,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "TYCOON.Tests.CommerceTests.AlreadyCreditedReceiptCannotCreditWalletAgain",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.CashierReservationAllowsOneWorkerAndCanBeReleased",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.DuplicateSaleDoesNotConsumeAnotherCart",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.DuplicateSnapshotReceiptIsRejected",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.FarmerRetainsGoodsWhenStorageFullAndRecoversAfterSpaceOpens",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.FarmersReserveHarvestAndTransferGoodsWithoutDuplication",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.InvalidSaleIdLeavesGoodsUntouched",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.InvalidSnapshotDoesNotReplaceCurrentDrawer",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.PendingRevenueSurvivesJsonRoundtripAndIsCollectedOnce",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.ProcessorWorkerFeedsRecipeAndDeliversRealOutput",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.QueueLimitsCapacityAndReordersAfterHeadLeaves",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.RealShelfSaleConsumesGoodsAndCollectsExactlyOnce",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.ReservationReturnsCartAfterQueueCancellationWithoutLosingGoods",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.RestockerMovesOnlyShelfCapacityAndConservesGoods",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.RestockerRestoredCarryResumesDeliveryWithoutTakingNewStock",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.SaleConsumesSplitStacksBeforeOneInventoryChangedEvent",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.StockoutDoesNotCreateCartGoodsOrRevenue",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CommerceTests.WalletOverflowKeepsDrawerReceiptUntilCollectionCanSucceed",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.BlockedProductionSurvivesLoadAndCompletesOnlyWhenSpaceIsAvailable",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.CapacityCannotShrinkBelowContentsAndSupportsEmptyInventory",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.CompletedSaleIsIdempotentBeforeAndAfterLoad",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.FailedFileReplacementRemovesItsTemporaryFileAndPreservesOtherFiles",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.InvalidInventoryOperationsPreserveQuantitiesAndEvents",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.InvalidSaveFileReturnsErrorAndNoData(\"{}\")",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.InvalidSaveFileReturnsErrorAndNoData(\"not json\")",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.InvalidSaveFileReturnsErrorAndNoData(\"{\\\"version\\\":999}\")",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.InvalidSaveFileReturnsErrorAndNoData(\"{\\\"version\\\":1,\\\"wallet\\\":{\\\"balance\\\":-1}}\")",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.InvalidWalletSnapshotDoesNotReplaceCurrentBalanceOrReceipts",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.InventoryCapacityCountsUnitsAndStacksRespectItemLimit",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.ItemDefinitionRejectsInvalidIdsAndValues",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.MidProductionFileRoundTripDoesNotConsumeInputsAgain",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.MissingSaveReturnsErrorAndNoData",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.PendingCheckoutReceiptSurvivesFileLoadAndCanBeCollectedOnce",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.RecipeConsumptionChecksAllIngredientsBeforeMutating",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.RecipeConsumptionRejectsDuplicateIdsWithoutRemovingAnything",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.SaveOverwriteLeavesOnlyDestinationAndInvalidSaveKeepsOldFile",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.SaveRejectsPendingReceiptAlreadyCreditedButAllowsCollectedReceiptHistory",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.SaveRejectsTransactionAppearingAtMultipleCheckouts",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.SaveRoundTripPreservesAllRequiredStableIdState",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.SaveValidationRejectsInvalidNumbersDuplicateIdsAndMissingState",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.SnapshotLoadRejectsOverflowAndDuplicateItems",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.SnapshotLoadRejectsUnknownItemWithoutPartialReplacement",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.SnapshotLoadRequiresCatalogKeyToMatchDefinitionId",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.TransferFailureIsAtomicAndSuccessPublishesCompletedState",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.TransferRejectsSelfAndInsufficientSource",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.FoundationTests.WalletRejectsInsufficientFundsAndOverflowWithoutMutation",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProductionTests.FullCarryCannotDuplicateHarvest",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProductionTests.FullOutputDoesNotConsumeInput",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProductionTests.HarvestDoesNotBankProductionWhileStorageIsFull",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProductionTests.MissingIngredientDoesNotConsumeAnotherIngredient",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProductionTests.OutputThatFillsMidCyclePreservesPendingBatchUntilSpaceReturns",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProductionTests.RestoredMidCycleCompletesWithoutConsumingIngredientsTwice",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProductionTests.VisualStacksClearAndReuseObjectsAcrossQuantityChanges",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "file": "TestResults/core-play-r1.xml",
+      "sha256": "563c869bb293a1eadd30acb31986add3661576cfcb7874d0647d4e12af27a46c",
+      "result": "Passed",
+      "total": 33,
+      "passed": 33,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "TYCOON.Tests.CustomerFlowTests.CustomerWalksTakesQueuesPaysAndExits",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CustomerFlowTests.PoolSaveBarrierReturnsCartsAndReusesTheSameInstances",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.CustomerFlowTests.StockoutCustomerExitsWithoutPayment",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.PlayerInputTests.ArrowKeysAndShiftDriveTheSamePlayerActions",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.PlayerInputTests.DisabledReaderDoesNotMovePlayerWithHeldInput",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.PlayerInputTests.GamepadRetainsAnalogMovementAndTriggerSprint",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.PlayerInputTests.WasdDiagonalDoesNotExceedFullStickSpeedAndReleaseStopsInput",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.PlayerMovementTests.CameraConvergesWithoutOvershootAndKeepsPitch",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.PlayerMovementTests.CameraMovesInFrontOfObstructionInsteadOfThroughIt",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.PlayerMovementTests.DiagonalTravelMatchesCardinalTravel",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.PlayerMovementTests.MovementUsesCameraHeadingAndSprintIncreasesTravel",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.PlayerMovementTests.ReleasingInputStopsWithoutHorizontalDrift",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.PlayerMovementTests.WallBlocksPlayerAndReportsActualStoppedSpeed",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.InteractionTests.FullShelfRejectsRestockWithoutLosingCarriedGoods",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.InteractionTests.FullStorageDoesNotRemoveCarriedItemAndEmptyCarryCanWithdraw",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.InteractionTests.HarvestCannotOverflowPlayerCarryOrLoseProduce",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.InteractionTests.HudReflectsActualBalanceCarriedItemsAndCapacity",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.InteractionTests.InteractionActionSupportsKeyboardAndGamepad",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.InteractionTests.MachineInteractionLoadsInputThenTakesOutputWithoutOverflow",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.InteractionTests.PadUnlocksObjectOnlyForItsSessionAndRestoredOwnership",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.InteractionTests.PlayerSelectsNearestEnabledZoneWithinRadius",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.InteractionTests.StorageDepositMovesExactlyOneItem",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.EmployeeAndMachineLevelsAreSavedSeparatelyAndCostsIncrease",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.ExactBalanceBuysOnceAndDuplicateDoesNotChargeAgain",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.InsufficientMoneyDoesNotSpendOrUnlock",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.InvalidRestoreDoesNotPartiallyMutateExistingProgression",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.InvalidUpgradeIdsAndOverflowingLevelPricesAreRejected",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.JsonProgressionRoundTripPreservesStageEmployeesAndLevels",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.MissingPrerequisiteBlocksEvenAtRequiredStage",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.NewSessionStartsAtFarmWithoutFreeMoney",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.ProgressionRestorePreservesWalletAndCompletedSaleIds",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.StageAndPrerequisiteGuardsRequirePreviousPurchase",
+          "result": "Passed"
+        },
+        {
+          "name": "TYCOON.Tests.ProgressionTests.WalletCallbackCannotReenterAndChargePurchaseTwice",
+          "result": "Passed"
+        }
+      ]
+    }
+  ]
+}

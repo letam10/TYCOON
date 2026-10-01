@@ -1,0 +1,7 @@
+{
+  "name": "Tycoon.Player.PlayModeTests",
+  "rootNamespace": "TYCOON.Tests",
+  "references": ["Tycoon.Runtime", "Unity.InputSystem", "Unity.InputSystem.TestFramework"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

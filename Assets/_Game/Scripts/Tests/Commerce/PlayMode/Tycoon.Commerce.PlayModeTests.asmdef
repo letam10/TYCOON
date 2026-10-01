@@ -1,0 +1,7 @@
+{
+  "name": "Tycoon.Commerce.PlayModeTests",
+  "rootNamespace": "TYCOON.Tests",
+  "references": ["Tycoon.Runtime", "Unity.AI.Navigation"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

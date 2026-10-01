@@ -1,0 +1,6 @@
+{
+  "name": "Tycoon.Runtime",
+  "rootNamespace": "TYCOON",
+  "references": ["Unity.InputSystem", "Unity.ugui"],
+  "autoReferenced": true
+}

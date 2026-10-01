@@ -1,0 +1,7 @@
+{
+  "name": "Tycoon.Progression.PlayModeTests",
+  "rootNamespace": "TYCOON.Tests",
+  "references": ["Tycoon.Runtime", "Unity.InputSystem", "Unity.ugui"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

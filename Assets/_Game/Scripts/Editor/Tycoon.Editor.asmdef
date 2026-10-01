@@ -1,0 +1,11 @@
+{
+  "name": "Tycoon.Editor",
+  "rootNamespace": "TYCOON.Editor",
+  "references": [
+    "Tycoon.Runtime",
+    "UnityEditor.TestRunner",
+    "UnityEngine.TestRunner"
+  ],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

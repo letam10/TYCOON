@@ -1,0 +1,8 @@
+{
+  "name": "Tycoon.Foundation.EditModeTests",
+  "rootNamespace": "TYCOON.Tests",
+  "references": ["Tycoon.Runtime"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}
