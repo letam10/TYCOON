@@ -1,0 +1,41 @@
+# Unity generated caches and local editor state
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Bb]uild/
+/[Bb]uilds/
+/MemoryCaptures/
+/Recordings/
+/.vs/
+/.idea/
+*.csproj
+*.sln
+*.slnx
+*.user
+*.pidb
+*.booproj
+*.unityproj
+*.opendb
+*.VC.db
+*.pdb
+*.mdb
+sysinfo.txt
+.DS_Store
+Thumbs.db
+
+# Task-owned scratch space and test runner products
+/work/
+/TestResults/
+*.tmp
+*.log
+
+# USER_PROVIDED derivatives are internal-only until distribution is authorized.
+/ArtSource/Processed/
+/Assets/_Game/Art/Imported/UserProvided/
+/Assets/_Game/Art/Imported/UserProvided.meta
+
+# Unity package exports and crash dumps
+*.unitypackage
+*.dmp
