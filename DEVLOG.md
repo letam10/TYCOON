@@ -27,3 +27,12 @@
 - Next: commit tested milestones, then integrate world persistence and scene.
 
 - Git milestone: c3ebba5 Bootstrap Unity URP project and audit source assets; pushed origin/main successfully.
+
+## 2026-10-02 — world save coordination
+- Added scene-scoped save/load for inventories, worker cargo, consumed production batches,
+  checkout receipts, crop timers, progression, player pose and camera reset.
+- Saving projects unpaid customer goods back into shelf snapshots without interrupting live queues.
+- Malformed or incompatible saves are rejected before mutation and block accidental overwrite.
+- Evidence: save-edit-r1.xml 53/53 and save-play-r1.xml 40/40 passed (93 total).
+- These results cover components and live NavMesh test fixtures. Full game restart and rendered
+  gameplay remain pending; no release build is claimed.

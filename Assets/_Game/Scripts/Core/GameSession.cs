@@ -130,7 +130,7 @@ namespace TYCOON
             };
         }
 
-        public bool TryRestoreState(ProgressionState state)
+        public static bool IsValidState(ProgressionState state)
         {
             if (state == null || !Enum.IsDefined(typeof(BusinessStage), state.stage) ||
                 !TryReadIds(state.unlockedIds, out HashSet<string> restoredUnlocks) ||
@@ -144,12 +144,18 @@ namespace TYCOON
             foreach (string id in restoredEmployees)
                 if (restoredUnlocks.Contains(id)) return false;
 
+            return true;
+        }
+
+        public bool TryRestoreState(ProgressionState state)
+        {
+            if (!IsValidState(state)) return false;
             // Kiểm tra toàn bộ snapshot trước khi thay đổi phiên chơi hiện tại.
             stage = state.stage;
             unlocks.Clear(); employees.Clear(); levels.Clear();
-            foreach (string id in restoredUnlocks) unlocks.Add(id);
-            foreach (string id in restoredEmployees) employees.Add(id);
-            foreach (var pair in restoredLevels) levels.Add(pair.Key, pair.Value);
+            foreach (string id in state.unlockedIds) unlocks.Add(id);
+            foreach (string id in state.employeeIds) employees.Add(id);
+            foreach (var value in state.upgradeLevels) levels.Add(value.upgradeId, value.level);
             Changed?.Invoke();
             return true;
         }

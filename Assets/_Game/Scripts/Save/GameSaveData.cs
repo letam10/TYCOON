@@ -16,6 +16,22 @@ namespace TYCOON
         // isProcessing=true nghĩa là nguyên liệu đã được tiêu hao trước khi lưu.
         public MachineState[] production = Array.Empty<MachineState>();
         public CheckoutSnapshot[] checkouts = Array.Empty<CheckoutSnapshot>();
+        public HarvestSnapshot[] harvests = Array.Empty<HarvestSnapshot>();
+        public PlayerSnapshot player = new PlayerSnapshot();
+    }
+
+    [Serializable]
+    public sealed class HarvestSnapshot
+    {
+        public string nodeId;
+        public float elapsedSeconds;
+    }
+
+    [Serializable]
+    public sealed class PlayerSnapshot
+    {
+        public bool hasPosition;
+        public float x, y, z, yaw;
     }
 
     [Serializable]

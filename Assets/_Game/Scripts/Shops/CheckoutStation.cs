@@ -90,8 +90,11 @@ namespace TYCOON
         public CheckoutSnapshot CaptureState()
         {
             if (queue.Count != 0) throw new InvalidOperationException("Suspend customers before saving checkout.");
-            return new CheckoutSnapshot { checkoutId = stableId, ledger = ledger.CreateSnapshot() };
+            return CaptureLedgerState();
         }
+
+        public CheckoutSnapshot CaptureLedgerState() =>
+            new CheckoutSnapshot { checkoutId = stableId, ledger = ledger.CreateSnapshot() };
 
         public bool TryRestoreState(CheckoutSnapshot snapshot)
         {

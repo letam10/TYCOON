@@ -18,6 +18,7 @@ namespace TYCOON
         public int AvailableCount => product == null ? 0 : Output.Inventory.GetCount(product);
         public bool IsReady => AvailableCount > 0;
         public float Progress => Mathf.Clamp01(elapsed / productionSeconds);
+        public float ElapsedSeconds => elapsed;
 
         public void Configure(string id, ItemDefinition item, float seconds, int capacity = 5, int initialQuantity = 1)
         {

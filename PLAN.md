@@ -17,7 +17,8 @@ gates remain in Documentation/QA.md; component tests do not prove final game qua
 - RTX 4060/D3D11 verified in the earlier graphics session; current CPU tests use Null Device.
 - Fixed missing Particle System dependency, StableId name shadowing, obsolete GetInstanceID and editor reflection API.
 - Clean compilation and 53/53 EditMode tests PASS: foundation, commerce and production.
-- 33/33 PlayMode tests PASS: player/input/camera, NavMesh customers/pooling, interaction/progression/HUD data.
+- 40/40 PlayMode tests PASS: player/input/camera, NavMesh customers/pooling, interaction/progression/HUD data, persistence.
+- Scene-scoped save coordinator implemented; 93 component tests passed, including non-disruptive queue snapshots.
 - Source audit, asset provenance, architecture and acceptance matrix recorded.
 
 ## IN PROGRESS
@@ -41,8 +42,8 @@ and Windows build are incomplete. Character1 diagnostic rig has fused hand/hip s
 no invalid rig has been exported into Unity.
 
 ## LAST TEST RESULT
-2026-10-01: compile PASS; TestResults/core-edit-r3.xml 53/53 PASS;
-TestResults/core-play-r1.xml 33/33 PASS. Zero reported compiler issues, Console errors,
+2026-10-02: compile PASS; TestResults/save-edit-r1.xml 53/53 PASS;
+TestResults/save-play-r1.xml 40/40 PASS. Zero reported compiler issues, Console errors,
 exceptions or assertions in both runs. These are component tests under Null Device.
 
 ## LAST BUILD RESULT

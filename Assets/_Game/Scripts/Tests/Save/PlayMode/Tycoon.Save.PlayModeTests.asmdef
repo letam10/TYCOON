@@ -1,0 +1,7 @@
+{
+  "name": "Tycoon.Save.PlayModeTests",
+  "rootNamespace": "TYCOON.Tests",
+  "references": ["Tycoon.Runtime"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

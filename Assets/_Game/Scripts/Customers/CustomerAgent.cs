@@ -24,6 +24,7 @@ namespace TYCOON
         public event Action<CustomerState> StateChanged;
         public event Action Paid;
         public ItemInventory Cart => cart ?? (cart = new ItemInventory(1));
+        public Shelf SourceShelf => selectedShelf;
         public CustomerState State { get; private set; } = CustomerState.Spawn;
         public string VisitId { get; private set; }
         public bool PaymentComplete { get; private set; }

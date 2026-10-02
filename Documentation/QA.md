@@ -113,3 +113,12 @@ Hoàn thành toàn bộ chỉ khi evidence hiện tại chứng minh mọi yêu 
 - No Console errors/exceptions/assertions reported for either run.
 - This proves the component scenarios covered by those suites. Broad scene, visual, animation, build and full-game gates above remain unpassed.
 - Portable case-level evidence: Documentation/TestEvidence/core-components-2026-10-01.json.
+
+## 2026-10-02 persistence milestone
+
+- 93 passing tests: 53 EditMode and 40 PlayMode under Unity 6000.6.3f1 / Null Device.
+- Added six save coordination tests and a live customer queue/save projection test.
+- Verified consumed recipe batches, worker cargo, crop timers, player pose and progression
+  restoration; receipts collect exactly once; invalid worlds and nonfinite data are rejected.
+- Portable evidence: `Documentation/TestEvidence/persistence-2026-10-02.json`.
+- Not evidence of full-world restart, animation appearance, graphics, frame rate or release readiness.

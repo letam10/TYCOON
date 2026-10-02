@@ -48,7 +48,8 @@ namespace TYCOON
                 var candidate = new GameSaveData
                 {
                     version = 0, wallet = null, inventories = null, upgrades = null, unlocks = null,
-                    businessStageId = null, employeeUnlocks = null, production = null, checkouts = null
+                    businessStageId = null, employeeUnlocks = null, production = null, checkouts = null,
+                    harvests = null, player = null
                 };
                 JsonUtility.FromJsonOverwrite(json, candidate);
                 if (!TryValidate(candidate, out error)) return false;
@@ -70,6 +71,7 @@ namespace TYCOON
             if (data.version != GameSaveData.CurrentVersion) { error = "Unsupported save version: " + data.version; return false; }
             if (!TryValidateWallet(data.wallet, out error)) return false;
             if (data.inventories == null || data.upgrades == null || data.production == null || data.checkouts == null ||
+                data.harvests == null || data.player == null ||
                 !StableId.IsValid(data.businessStageId)) { error = "Save is missing required state."; return false; }
             var inventoryIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var inventory in data.inventories)
@@ -103,8 +105,17 @@ namespace TYCOON
                     if (creditedIds.Contains(receipt.transactionId))
                     { error = "Pending transaction was already credited to wallet."; return false; }
             }
+            var harvestIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var harvest in data.harvests)
+                if (harvest == null || !StableId.IsValid(harvest.nodeId) || !harvestIds.Add(harvest.nodeId) ||
+                    harvest.elapsedSeconds < 0f || !Finite(harvest.elapsedSeconds))
+                { error = "Invalid or duplicate harvest state."; return false; }
+            if (!Finite(data.player.x) || !Finite(data.player.y) || !Finite(data.player.z) || !Finite(data.player.yaw))
+            { error = "Invalid player position."; return false; }
             return true;
         }
+
+        private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
         internal static bool TryValidateWallet(WalletSnapshot wallet, out string error)
         {

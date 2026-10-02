@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.IO;
 using NUnit.Framework;
 using Unity.AI.Navigation;
 using UnityEngine;
@@ -152,6 +153,40 @@ namespace TYCOON.Tests
             Assert.IsTrue(pool.TrySpawn());
             CollectionAssert.AreEqual(entityIds, pool.Customers.Select(customer => customer.GetEntityId()).ToArray());
             Assert.AreEqual(12, pool.Capacity);
+        }
+
+        [UnityTest]
+        public IEnumerator SavingProjectsUnsoldGoodsWithoutInterruptingLiveCustomer()
+        {
+            var session = testRoot.AddComponent<GameSession>(); session.Configure();
+            var saves = testRoot.AddComponent<SaveCoordinator>();
+            var savePath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "work", "customer-save-" + Guid.NewGuid().ToString("N") + ".json"));
+            saves.Configure(session, new[] {carrot}, path: savePath, automatic: false);
+            var template = Customer("SaveCustomerTemplate", false);
+            var pool = Owner("SavePool", Vector3.zero).AddComponent<CustomerPool>();
+            pool.Configure(template, spawn, entrance, exit, new[] {shelf}, checkout, 12, 300f);
+            pool.Initialize(); pool.TrySpawn();
+            yield return Await(() => pool.Customers.Any(customer => customer.IsReadyForCheckout), "Customer never reached checkout.");
+            var customer = pool.Customers.Single(value => value.Cart.TotalCount > 0);
+            try
+            {
+                var stateBefore = customer.State;
+                Assert.IsTrue(saves.TrySave(out var error), error);
+                Assert.AreEqual(1, pool.ActiveCount);
+                Assert.AreEqual(1, customer.Cart.TotalCount);
+                Assert.AreEqual(11, shelf.AvailableCount);
+                Assert.AreEqual(1, checkout.QueueCount);
+                Assert.AreEqual(stateBefore, customer.State);
+                Assert.IsFalse(pool.IsSuspended);
+                Assert.IsTrue(JsonSaveStore.TryLoad(savePath, out var data, out error), error);
+                Assert.AreEqual(12, data.inventories.Single(value => value.inventoryId == shelf.Store.StableId).items.Sum(value => value.quantity));
+                Assert.IsTrue(saves.TryLoad(out error), error);
+                Assert.AreEqual(0, pool.ActiveCount);
+                Assert.AreEqual(0, checkout.QueueCount);
+                Assert.AreEqual(12, shelf.AvailableCount);
+                Assert.AreEqual(0, checkout.PendingRevenue);
+            }
+            finally { if (File.Exists(savePath)) File.Delete(savePath); }
         }
     }
 }
