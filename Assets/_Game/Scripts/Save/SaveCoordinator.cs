@@ -77,7 +77,9 @@ namespace TYCOON
             {
                 var definitions = Definitions();
                 var inventories = Inventories();
-                // Hàng khách chưa trả tiền thuộc bản save của kệ; không thay đổi giỏ/queue đang chạy.
+                // Save v1 chưa có OrderState; chặn ghi để không hoàn hàng khách về kệ.
+                if (World<CustomerAgent>().Any(customer => customer.HasUnsettledGoods))
+                    throw new InvalidOperationException("Save v1 cannot capture while a customer holds goods; finish or fail the order first.");
                 var projected = inventories.ToDictionary(pair => pair.Key, pair =>
                 {
                     var inventory = new ItemInventory(pair.Value.Capacity);
@@ -85,15 +87,6 @@ namespace TYCOON
                         throw new InvalidOperationException("Inventory snapshot is invalid: " + pair.Key);
                     return inventory;
                 }, StringComparer.Ordinal);
-                foreach (var customer in World<CustomerAgent>())
-                {
-                    if (customer.Cart.TotalCount == 0) continue;
-                    if (customer.SourceShelf == null || !projected.TryGetValue(customer.SourceShelf.Store.StableId, out var shelf))
-                        throw new InvalidOperationException("Customer goods have no source shelf.");
-                    foreach (var stack in customer.Cart.Stacks)
-                        if (!shelf.TryAdd(stack.Item, stack.Quantity))
-                            throw new InvalidOperationException("Customer return reservation exceeds shelf capacity.");
-                }
                 var progress = session.CaptureState();
                 data = new GameSaveData
                 {
@@ -134,6 +127,8 @@ namespace TYCOON
             }
             if (!ValidateWorld(data, out var progress, out error))
             { writesBlocked = true; return Fail(error, out error); }
+            if (World<CustomerAgent>().Any(customer => customer.HasUnsettledGoods))
+                return Fail("Save v1 cannot load while a customer holds goods; finish or fail the order first.", out error);
             var pools = World<CustomerPool>();
             foreach (var pool in pools)
                 if (!pool.SuspendAndReturnCarts())

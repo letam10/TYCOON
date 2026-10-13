@@ -16,12 +16,27 @@ namespace TYCOON
     }
 
     [Serializable]
+    public struct PurchaseProgressState
+    {
+        public string upgradeId;
+        public int totalCost;
+        public int contributed;
+        public bool completed;
+
+        public PurchaseProgressState(string id, int total, int paid, bool done)
+        {
+            upgradeId = id; totalCost = total; contributed = paid; completed = done;
+        }
+    }
+
+    [Serializable]
     public sealed class ProgressionState
     {
         public BusinessStage stage;
         public string[] unlockedIds = Array.Empty<string>();
         public string[] employeeIds = Array.Empty<string>();
         public UpgradeLevelState[] upgradeLevels = Array.Empty<UpgradeLevelState>();
+        public PurchaseProgressState[] purchaseProgress = Array.Empty<PurchaseProgressState>();
     }
 
     [DisallowMultipleComponent]
@@ -34,6 +49,8 @@ namespace TYCOON
         private readonly HashSet<string> unlocks = new HashSet<string>(StringComparer.Ordinal);
         private readonly HashSet<string> employees = new HashSet<string>(StringComparer.Ordinal);
         private readonly Dictionary<string, int> levels = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> purchaseProgress = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> purchaseTotals = new Dictionary<string, int>(StringComparer.Ordinal);
 
         public event Action Changed;
         public Wallet Wallet => wallet ?? (wallet = new Wallet(startingMoney));
@@ -59,7 +76,7 @@ namespace TYCOON
             startingMoney = initialMoney;
             wallet = new Wallet(initialMoney);
             stage = BusinessStage.Farm;
-            unlocks.Clear(); employees.Clear(); levels.Clear();
+            unlocks.Clear(); employees.Clear(); levels.Clear(); purchaseProgress.Clear(); purchaseTotals.Clear();
             Changed?.Invoke();
         }
 
@@ -71,6 +88,8 @@ namespace TYCOON
             if (levels.TryGetValue(id, out int value)) return value;
             return HasUnlock(id) || HasEmployee(id) ? 1 : 0;
         }
+
+        public int GetPurchaseContribution(string id) => id != null && purchaseProgress.TryGetValue(id, out int value) ? value : 0;
 
         public bool CanPurchase(UpgradeDefinition definition, out PurchaseFailure failure)
         {
@@ -95,23 +114,49 @@ namespace TYCOON
 
         public bool TryPurchase(UpgradeDefinition definition, out PurchaseFailure failure)
         {
+            return TryContributePurchase(definition, int.MaxValue, out failure);
+        }
+
+        public bool TryContributePurchase(UpgradeDefinition definition, int requestedAmount, out PurchaseFailure failure)
+        {
             if (!CanPurchase(definition, out failure)) return false;
+            if (requestedAmount < 1) requestedAmount = 1;
             int level = GetUpgradeLevel(definition.StableId);
+            int totalCost = definition.CostAtLevel(level);
+            int paid = GetPurchaseContribution(definition.StableId);
+            int remaining = Mathf.Max(0, totalCost - paid);
+            int debit = Mathf.Min(requestedAmount, remaining, Wallet.Balance);
+            if (debit < 1)
+            {
+                failure = PurchaseFailure.InsufficientMoney;
+                return false;
+            }
             purchasing = true;
             try
             {
-                if (!Wallet.TrySpend(definition.CostAtLevel(level)))
+                if (!Wallet.TrySpend(debit))
                 {
                     failure = PurchaseFailure.InsufficientMoney;
                     return false;
                 }
-                // Chỉ ghi quyền sở hữu sau khi giao dịch trừ tiền đã thành công.
+                paid += debit;
+                if (paid < totalCost)
+                {
+                    purchaseProgress[definition.StableId] = paid;
+                    purchaseTotals[definition.StableId] = totalCost;
+                    failure = PurchaseFailure.None;
+                    Changed?.Invoke();
+                    return true;
+                }
+                purchaseProgress.Remove(definition.StableId);
+                purchaseTotals.Remove(definition.StableId);
                 levels[definition.StableId] = level + 1;
                 if (definition.Kind == UpgradeKind.Employee) employees.Add(definition.StableId);
                 else unlocks.Add(definition.StableId);
                 if (definition.UnlockedStage > stage) stage = definition.UnlockedStage;
             }
             finally { purchasing = false; }
+            failure = PurchaseFailure.None;
             Changed?.Invoke();
             return true;
         }
@@ -121,12 +166,20 @@ namespace TYCOON
             var savedLevels = new List<UpgradeLevelState>();
             foreach (var pair in levels) savedLevels.Add(new UpgradeLevelState(pair.Key, pair.Value));
             savedLevels.Sort((a, b) => StringComparer.Ordinal.Compare(a.upgradeId, b.upgradeId));
+            var savedPurchases = new List<PurchaseProgressState>();
+            foreach (var pair in purchaseProgress)
+            {
+                int total = purchaseTotals.TryGetValue(pair.Key, out int storedTotal) ? storedTotal : 0;
+                savedPurchases.Add(new PurchaseProgressState(pair.Key, total, pair.Value, false));
+            }
+            savedPurchases.Sort((a, b) => StringComparer.Ordinal.Compare(a.upgradeId, b.upgradeId));
             return new ProgressionState
             {
                 stage = stage,
                 unlockedIds = SortedIds(unlocks),
                 employeeIds = SortedIds(employees),
-                upgradeLevels = savedLevels.ToArray()
+                upgradeLevels = savedLevels.ToArray(),
+                purchaseProgress = savedPurchases.ToArray()
             };
         }
 
@@ -143,6 +196,12 @@ namespace TYCOON
                 else restoredLevels.Add(value.upgradeId, value.level);
             foreach (string id in restoredEmployees)
                 if (restoredUnlocks.Contains(id)) return false;
+            var restoredPurchases = new HashSet<string>(StringComparer.Ordinal);
+            if (state.purchaseProgress != null)
+                foreach (PurchaseProgressState value in state.purchaseProgress)
+                    if (!StableId.IsValid(value.upgradeId) || !restoredPurchases.Add(value.upgradeId) ||
+                        value.totalCost < 0 || value.contributed < 1 || value.contributed > value.totalCost ||
+                        restoredUnlocks.Contains(value.upgradeId) || restoredEmployees.Contains(value.upgradeId)) return false;
 
             return true;
         }
@@ -152,10 +211,16 @@ namespace TYCOON
             if (!IsValidState(state)) return false;
             // Kiểm tra toàn bộ snapshot trước khi thay đổi phiên chơi hiện tại.
             stage = state.stage;
-            unlocks.Clear(); employees.Clear(); levels.Clear();
+            unlocks.Clear(); employees.Clear(); levels.Clear(); purchaseProgress.Clear(); purchaseTotals.Clear();
             foreach (string id in state.unlockedIds) unlocks.Add(id);
             foreach (string id in state.employeeIds) employees.Add(id);
             foreach (var value in state.upgradeLevels) levels.Add(value.upgradeId, value.level);
+            if (state.purchaseProgress != null)
+                foreach (PurchaseProgressState value in state.purchaseProgress)
+                {
+                    purchaseProgress.Add(value.upgradeId, value.contributed);
+                    purchaseTotals.Add(value.upgradeId, value.totalCost);
+                }
             Changed?.Invoke();
             return true;
         }

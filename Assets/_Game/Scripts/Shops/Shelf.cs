@@ -52,8 +52,16 @@ namespace TYCOON
 
         public bool TryReturnFromCustomer(CustomerAgent customer)
         {
-            if (customer == null || !returnReservations.TryGetValue(customer, out var quantity)) return false;
-            if (!customer.Cart.TryTransferTo(Store.Inventory, product, quantity)) return false;
+            if (customer == null || !returnReservations.ContainsKey(customer)) return false;
+            // Luồng prototype cũ từng trả hàng khách về kệ; kết quả mới phải ghi nhận thất thoát.
+            customer.AbandonHeldGoods();
+            CompletePurchase(customer);
+            return true;
+        }
+
+        public bool AbandonCustomer(CustomerAgent customer)
+        {
+            if (customer == null || !returnReservations.ContainsKey(customer)) return false;
             CompletePurchase(customer);
             return true;
         }

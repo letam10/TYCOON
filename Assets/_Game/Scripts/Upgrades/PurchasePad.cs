@@ -16,7 +16,10 @@ namespace TYCOON
         [SerializeField] private AudioClip purchaseSound;
         [SerializeField] private AudioClip deniedSound;
         [SerializeField, Min(0.05f)] private float revealSeconds = 0.35f;
+        [SerializeField, Min(1f)] private float contributionPerSecond = 500f;
         private GameSession observedSession;
+        private PlayerInteractor actorInZone;
+        private float contributionRemainder;
         private Coroutine revealRoutine;
         private Transform[] revealedTransforms;
         private Vector3[] revealScales;
@@ -28,7 +31,8 @@ namespace TYCOON
         public string LastFeedback { get; private set; }
         public int CurrentCost => definition != null && definition.IsValid && session != null &&
             session.GetUpgradeLevel(definition.StableId) < definition.MaxLevel
-            ? definition.CostAtLevel(session.GetUpgradeLevel(definition.StableId)) : 0;
+            ? Mathf.Max(0, definition.CostAtLevel(session.GetUpgradeLevel(definition.StableId)) -
+                session.GetPurchaseContribution(definition.StableId)) : 0;
         public override string Prompt => definition == null ? "Purchase" :
             session != null && session.GetUpgradeLevel(definition.StableId) >= definition.MaxLevel
                 ? definition.DisplayName + " • Owned" : definition.DisplayName + " • $" + CurrentCost;
@@ -59,7 +63,14 @@ namespace TYCOON
             base.OnDisable();
             if (observedSession != null) observedSession.Changed -= ApplyPurchasedState;
             observedSession = null;
+            actorInZone = null;
+            contributionRemainder = 0f;
             FinishReveal();
+        }
+
+        private void Update()
+        {
+            if (actorInZone != null && actorInZone.isActiveAndEnabled) Contribute(actorInZone, Time.deltaTime);
         }
 
         private void ObserveSession()
@@ -72,25 +83,55 @@ namespace TYCOON
         private void OnTriggerEnter(Collider other)
         {
             PlayerInteractor actor = other.GetComponentInParent<PlayerInteractor>();
-            if (actor != null) TryPurchase(actor);
+            if (actor != null) { actorInZone = actor; Contribute(actor, Time.deltaTime); }
         }
 
-        public override bool TryInteract(PlayerInteractor actor) => TryPurchase(actor);
-        public bool TryPurchase(PlayerInteractor actor)
+        private void OnTriggerStay(Collider other)
         {
-            bool firstPurchase = definition != null && session != null && session.GetUpgradeLevel(definition.StableId) == 0;
+            PlayerInteractor actor = other.GetComponentInParent<PlayerInteractor>();
+            if (actor != null) actorInZone = actor;
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
+            PlayerInteractor actor = other.GetComponentInParent<PlayerInteractor>();
+            if (actor != null && actor == actorInZone) { actorInZone = null; contributionRemainder = 0f; }
+        }
+
+        public override bool TryInteract(PlayerInteractor actor) => Contribute(actor, 1f / 60f);
+        public bool TryPurchase(PlayerInteractor actor) => ApplyContribution(actor, int.MaxValue);
+
+        private bool Contribute(PlayerInteractor actor, float seconds)
+        {
+            if (actor == null || session == null || actor.Session != session || definition == null) return false;
+            contributionRemainder += Mathf.Max(1f / 60f, seconds) * contributionPerSecond;
+            int amount = Mathf.FloorToInt(contributionRemainder);
+            if (amount < 1) return false;
+            contributionRemainder -= amount;
+            return ApplyContribution(actor, amount);
+        }
+
+        private bool ApplyContribution(PlayerInteractor actor, int amount)
+        {
+            if (actor == null || session == null || actor.Session != session || definition == null) return false;
+            bool firstPurchase = session.GetUpgradeLevel(definition.StableId) == 0;
+            int previousLevel = session.GetUpgradeLevel(definition.StableId);
             PurchaseFailure failure = PurchaseFailure.InvalidActor;
-            bool succeeded = actor != null && session != null && actor.Session == session && session.TryPurchase(definition, out failure);
+            bool succeeded = session.TryContributePurchase(definition, amount, out failure);
+            bool completed = session.GetUpgradeLevel(definition.StableId) > previousLevel;
             LastFailure = failure;
-            LastFeedback = succeeded ? "Unlocked " + definition.DisplayName + "!" : FailureMessage(failure);
-            if (actor != null) actor.ShowFeedback(LastFeedback);
-            if (feedbackAudio != null)
+            LastFeedback = completed ? "Unlocked " + definition.DisplayName + "!" :
+                succeeded ? "Contributed to " + definition.DisplayName + ". Remaining: " + CurrentCost : FailureMessage(failure);
+            actor.ShowFeedback(LastFeedback);
+            if (feedbackAudio != null && (completed || failure != PurchaseFailure.None))
             {
-                AudioClip clip = succeeded ? purchaseSound : deniedSound;
+                AudioClip clip = completed ? purchaseSound : deniedSound;
                 if (clip != null) feedbackAudio.PlayOneShot(clip);
             }
-            if (succeeded)
+            if (completed)
             {
+                actorInZone = null;
+                contributionRemainder = 0f;
                 ApplyPurchasedState();
                 if (purchaseParticles != null) purchaseParticles.Play();
                 if (firstPurchase && Application.isPlaying) BeginReveal();
@@ -99,7 +140,8 @@ namespace TYCOON
             return succeeded;
         }
 
-        private void ApplyPurchasedState()
+        public bool IsRevealing => revealRoutine != null;
+        public void ApplyPurchasedState()
         {
             if (definition == null || session == null) return;
             int level = session.GetUpgradeLevel(definition.StableId);

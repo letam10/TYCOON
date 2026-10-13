@@ -8,6 +8,14 @@ namespace TYCOON
         public override string Prompt => machine == null || machine.Recipe == null ? "Use machine" :
             "Load ingredients / collect " + machine.Recipe.Output.DisplayName;
         public void Configure(ProductionMachine station, float radius = 1.8f) { machine = station; ConfigureRadius(radius); }
+
+        public bool TryOperate(PlayerInteractor actor, float seconds)
+        {
+            if (actor == null || machine == null || seconds <= 0f || !machine.BeginOperation(actor)) return false;
+            try { machine.Tick(seconds); return true; }
+            finally { machine.EndOperation(actor); }
+        }
+
         public override bool TryInteract(PlayerInteractor actor)
         {
             if (actor == null || machine == null || machine.Recipe == null || machine.Input == null || machine.Output == null) return false;

@@ -11,10 +11,18 @@ namespace TYCOON
     }
 
     [Serializable]
+    public sealed class LostGoodsSnapshot
+    {
+        public string itemId;
+        public int quantity;
+    }
+
+    [Serializable]
     public sealed class CheckoutLedgerSnapshot
     {
         public string[] completedSaleIds = Array.Empty<string>();
         public CheckoutReceiptSnapshot[] pendingReceipts = Array.Empty<CheckoutReceiptSnapshot>();
+        public LostGoodsSnapshot[] lostGoods = Array.Empty<LostGoodsSnapshot>();
     }
 
     [Serializable]
@@ -28,8 +36,22 @@ namespace TYCOON
     {
         private readonly HashSet<string> completedSales = new HashSet<string>();
         private readonly Dictionary<string, long> drawer = new Dictionary<string, long>();
+        private readonly Dictionary<string, int> lostGoods = new Dictionary<string, int>(StringComparer.Ordinal);
         public long PendingRevenue { get; private set; }
         public int CompletedSaleCount => completedSales.Count;
+        public IReadOnlyDictionary<string, int> LostGoods => lostGoods;
+
+        public void RecordLoss(ItemInventory cart)
+        {
+            if (cart == null) return;
+            foreach (var stack in cart.Stacks)
+            {
+                if (stack.Item == null || stack.Quantity < 1) continue;
+                lostGoods.TryGetValue(stack.Item.Id, out int current);
+                lostGoods[stack.Item.Id] = checked(current + stack.Quantity);
+            }
+            cart.Clear();
+        }
 
         public bool TryCompleteSale(string transactionId, ItemInventory cart, out long amount)
         {
@@ -96,12 +118,17 @@ namespace TYCOON
             foreach (var receipt in drawer)
                 receipts[index++] = new CheckoutReceiptSnapshot { transactionId = receipt.Key, amount = receipt.Value };
             Array.Sort(receipts, (left, right) => string.CompareOrdinal(left.transactionId, right.transactionId));
-            return new CheckoutLedgerSnapshot { completedSaleIds = completed, pendingReceipts = receipts };
+            var losses = new LostGoodsSnapshot[lostGoods.Count];
+            var lossIndex = 0;
+            foreach (var loss in lostGoods)
+                losses[lossIndex++] = new LostGoodsSnapshot { itemId = loss.Key, quantity = loss.Value };
+            Array.Sort(losses, (left, right) => string.CompareOrdinal(left.itemId, right.itemId));
+            return new CheckoutLedgerSnapshot { completedSaleIds = completed, pendingReceipts = receipts, lostGoods = losses };
         }
 
         public static bool TryValidateSnapshot(CheckoutLedgerSnapshot snapshot)
         {
-            if (snapshot == null || snapshot.completedSaleIds == null || snapshot.pendingReceipts == null) return false;
+            if (snapshot == null || snapshot.completedSaleIds == null || snapshot.pendingReceipts == null || snapshot.lostGoods == null) return false;
             var completed = new HashSet<string>(StringComparer.Ordinal);
             foreach (var id in snapshot.completedSaleIds)
                 if (!StableId.IsValid(id) || !completed.Add(id)) return false;
@@ -114,6 +141,9 @@ namespace TYCOON
                 try { total = checked(total + receipt.amount); }
                 catch (OverflowException) { return false; }
             }
+            var losses = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var loss in snapshot.lostGoods)
+                if (loss == null || !StableId.IsValid(loss.itemId) || loss.quantity < 1 || !losses.Add(loss.itemId)) return false;
             return true;
         }
 
@@ -122,6 +152,7 @@ namespace TYCOON
             if (!TryValidateSnapshot(snapshot)) return false;
             completedSales.Clear();
             drawer.Clear();
+            lostGoods.Clear();
             PendingRevenue = 0;
             foreach (var id in snapshot.completedSaleIds) completedSales.Add(id);
             foreach (var receipt in snapshot.pendingReceipts)
@@ -129,6 +160,7 @@ namespace TYCOON
                 drawer.Add(receipt.transactionId, receipt.amount);
                 PendingRevenue += receipt.amount;
             }
+            foreach (var loss in snapshot.lostGoods) lostGoods.Add(loss.itemId, loss.quantity);
             return true;
         }
     }

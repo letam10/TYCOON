@@ -123,7 +123,7 @@ namespace TYCOON.Tests
         }
 
         [Test]
-        public void ReservationReturnsCartAfterQueueCancellationWithoutLosingGoods()
+        public void CustomerLossClearsCartWithoutReturningGoodsToShelf()
         {
             var shelf = Shelf(2, 2);
             var customer = Component<CustomerAgent>("Customer");
@@ -134,8 +134,9 @@ namespace TYCOON.Tests
             Assert.AreEqual(0, shelf.RestockCapacity);
             Assert.IsFalse(shelf.TryStock(Cart(1)));
             checkout.Leave(customer);
-            Assert.IsTrue(shelf.TryReturnFromCustomer(customer));
-            Assert.AreEqual(2, shelf.AvailableCount);
+            customer.AbandonHeldGoods();
+            Assert.IsTrue(shelf.AbandonCustomer(customer));
+            Assert.AreEqual(1, shelf.AvailableCount);
             Assert.AreEqual(0, customer.Cart.TotalCount);
             Assert.AreEqual(0, checkout.QueueCount);
             Assert.AreEqual(0, checkout.PendingRevenue);

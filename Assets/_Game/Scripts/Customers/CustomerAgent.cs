@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -23,11 +24,13 @@ namespace TYCOON
         private bool visiting;
         public event Action<CustomerState> StateChanged;
         public event Action Paid;
+        public event Action<CustomerAgent, ItemDefinition, int> GoodsLost;
         public ItemInventory Cart => cart ?? (cart = new ItemInventory(1));
         public Shelf SourceShelf => selectedShelf;
         public CustomerState State { get; private set; } = CustomerState.Spawn;
         public string VisitId { get; private set; }
         public bool PaymentComplete { get; private set; }
+        public bool HasUnsettledGoods => Cart.TotalCount > 0;
         public bool IsReadyForCheckout => visiting && State == CustomerState.Queue && queueReady && checkout != null &&
             checkout.QueueIndex(this) == 0 && (transform.position - checkout.GetQueuePosition(this)).sqrMagnitude <= 0.25f;
 
@@ -44,7 +47,11 @@ namespace TYCOON
         public void BeginVisit(Action<CustomerAgent> onReturnToPool)
         {
             if (checkout == null || entrance == null || exit == null) throw new InvalidOperationException("Configure customer before starting a visit.");
-            if (Cart.TotalCount > 0 && !CancelVisit()) throw new InvalidOperationException("Return the previous cart before reusing this customer.");
+            if (Cart.TotalCount > 0)
+            {
+                AbandonHeldGoods();
+                selectedShelf?.AbandonCustomer(this);
+            }
             checkout.Leave(this);
             movement = new AgentNavigation(GetComponent<NavMeshAgent>());
             returnToPool = onReturnToPool;
@@ -94,7 +101,6 @@ namespace TYCOON
                     break;
                 case CustomerState.Pay: SetState(CustomerState.Exit); break;
                 case CustomerState.Exit:
-                    if (Cart.TotalCount > 0 && !ReturnUnsoldCart()) break;
                     if (MoveTo(exit.position)) EndVisit();
                     break;
             }
@@ -139,19 +145,28 @@ namespace TYCOON
         {
             checkout?.Leave(this);
             queueReady = false;
-            if (!ReturnUnsoldCart()) return false;
+            AbandonHeldGoods();
+            selectedShelf?.AbandonCustomer(this);
             SetState(CustomerState.Exit);
             return true;
         }
 
-        private bool ReturnUnsoldCart()
+        public void AbandonHeldGoods()
         {
-            if (Cart.TotalCount == 0) return true;
-            return selectedShelf != null && selectedShelf.TryReturnFromCustomer(this);
+            if (Cart.TotalCount == 0) return;
+            var stacks = new List<ItemStack>(Cart.Stacks);
+            foreach (var stack in stacks) GoodsLost?.Invoke(this, stack.Item, stack.Quantity);
+            if (checkout != null) checkout.RecordCustomerLoss(Cart);
+            else Cart.Clear();
         }
 
         private void EndVisit()
         {
+            if (!PaymentComplete)
+            {
+                AbandonHeldGoods();
+                selectedShelf?.AbandonCustomer(this);
+            }
             visiting = false;
             movement.Stop();
             var callback = returnToPool;
@@ -170,7 +185,11 @@ namespace TYCOON
         {
             checkout?.Leave(this);
             queueReady = false;
-            ReturnUnsoldCart();
+            if (!PaymentComplete)
+            {
+                AbandonHeldGoods();
+                selectedShelf?.AbandonCustomer(this);
+            }
             visiting = false;
             movement?.Stop();
         }

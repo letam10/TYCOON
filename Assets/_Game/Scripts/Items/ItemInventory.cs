@@ -68,6 +68,14 @@ namespace TYCOON
             return true;
         }
 
+        public void Clear()
+        {
+            if (TotalCount == 0) return;
+            items.Clear();
+            TotalCount = 0;
+            Changed?.Invoke();
+        }
+
         public bool TryTransferTo(ItemInventory destination, ItemDefinition item, int quantity)
         {
             if (destination == null || ReferenceEquals(this, destination) || !IsValid(item) || quantity < 1 ||

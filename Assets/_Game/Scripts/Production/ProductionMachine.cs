@@ -21,12 +21,15 @@ namespace TYCOON
         [SerializeField, Min(0)] private int level;
         private float elapsed;
         private bool processing;
+        private bool operatorPresent;
+        private object operatorToken;
         public event Action Completed;
         public string StableId => stableId;
         public RecipeDefinition Recipe => recipe;
         public InventoryStore Input => input;
         public InventoryStore Output => output;
         public bool IsProcessing => processing;
+        public bool IsOperatorPresent => operatorPresent;
         public int Level => level;
         public float Duration => recipe == null ? 0f : recipe.Seconds / (1f + 0.25f * level);
         public float Progress => Duration > 0f ? Mathf.Clamp01(elapsed / Duration) : 0f;
@@ -39,7 +42,40 @@ namespace TYCOON
             stableId = id; recipe = definition; input = source; output = destination;
         }
 
-        private void Update() => Tick(Time.deltaTime);
+        private void Update()
+        {
+            if (operatorPresent) Tick(Time.deltaTime);
+        }
+
+        public bool CanStartOperation
+        {
+            get
+            {
+                if (recipe == null || input == null || output == null || output.Inventory.RemainingCapacity < recipe.OutputQuantity) return false;
+                if (processing) return true;
+                foreach (RecipeIngredient ingredient in recipe.Ingredients)
+                    if (input.Inventory.GetCount(ingredient.item) < ingredient.quantity) return false;
+                return true;
+            }
+        }
+
+        public bool BeginOperation(object token = null)
+        {
+            if (recipe == null || input == null || output == null ||
+                (operatorPresent && !ReferenceEquals(operatorToken, token))) return false;
+            operatorToken = token ?? this;
+            operatorPresent = true;
+            return true;
+        }
+
+        public void EndOperation(object token = null)
+        {
+            if (!operatorPresent || token == null || ReferenceEquals(operatorToken, token) || ReferenceEquals(operatorToken, this))
+            {
+                operatorToken = null;
+                operatorPresent = false;
+            }
+        }
         public void Tick(float seconds)
         {
             if (seconds < 0f || recipe == null || input == null || output == null) return;

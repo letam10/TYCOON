@@ -19,6 +19,7 @@ namespace TYCOON
         public long PendingRevenue => ledger.PendingRevenue;
         public int QueueCount => queue.Count;
         public WorkerAgent Cashier => cashier;
+        public IReadOnlyDictionary<string, int> LostGoods => ledger.LostGoods;
 
         public void Configure(Transform point, Transform[] positions, int queueCapacity = 15, string id = "checkout.main")
         {
@@ -85,6 +86,13 @@ namespace TYCOON
             var amount = ledger.CollectMoney(wallet);
             if (amount > 0) Changed?.Invoke();
             return amount;
+        }
+
+        public void RecordCustomerLoss(ItemInventory goods)
+        {
+            if (goods == null || goods.TotalCount == 0) return;
+            ledger.RecordLoss(goods);
+            Changed?.Invoke();
         }
 
         public CheckoutSnapshot CaptureState()
