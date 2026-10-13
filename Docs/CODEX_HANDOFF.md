@@ -26,4 +26,4 @@
 
 ## Commit và push GitHub
 
-Đang hoàn tất kiểm tra staged scope; commit hash và remote hash sẽ được ghi bổ sung ngay sau khi commit/push của milestone này. Không có file ngoài danh sách milestone được stage.
+Milestone commit `36611e2` đã được push lên `origin/main`; local HEAD và remote đã khớp tại thời điểm push. Handoff update này sẽ được commit riêng ngay sau đó. Không có file ngoài danh sách milestone được stage.
