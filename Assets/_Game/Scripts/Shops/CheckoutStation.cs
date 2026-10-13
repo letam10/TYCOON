@@ -47,6 +47,16 @@ namespace TYCOON
             if (queue.Remove(customer)) Changed?.Invoke();
         }
 
+        internal bool TryJoinRestored(CustomerAgent customer, int index)
+        {
+            if (customer == null || customer.Cart.TotalCount == 0 || queue.Contains(customer) ||
+                index < 0 || index > queue.Count || queue.Count >= capacity)
+                return false;
+            queue.Insert(index, customer);
+            Changed?.Invoke();
+            return true;
+        }
+
         public int QueueIndex(CustomerAgent customer) => queue.IndexOf(customer);
 
         public Vector3 GetQueuePosition(CustomerAgent customer)

@@ -206,5 +206,42 @@ namespace TYCOON.Tests
             }
             finally { if (File.Exists(savePath)) File.Delete(savePath); }
         }
+
+        [UnityTest]
+        public IEnumerator SaveV2RoundTripRestoresCustomerOrderCartAndQueue()
+        {
+            var session = testRoot.AddComponent<GameSession>();
+            session.Configure();
+            var saves = testRoot.AddComponent<SaveCoordinator>();
+            var savePath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "work",
+                "customer-save-v2-" + Guid.NewGuid().ToString("N") + ".json"));
+            saves.Configure(session, new[] { carrot }, automatic: false);
+            var template = Customer("SaveV2CustomerTemplate", false);
+            var pool = Owner("SaveV2Pool", Vector3.zero).AddComponent<CustomerPool>();
+            pool.Configure(template, spawn, entrance, exit, new[] { shelf }, checkout, 12, 300f);
+            pool.Initialize();
+            Assert.IsTrue(pool.TrySpawn());
+            yield return Await(() => pool.Customers.Any(customer => customer.IsReadyForCheckout),
+                "Save v2 customer never reached checkout.");
+            var before = pool.Customers.Single(customer => customer.Cart.TotalCount > 0);
+            var beforeId = before.StableId;
+            try
+            {
+                Assert.IsTrue(saves.TrySaveV2(savePath, out var saveError), saveError);
+                Assert.AreEqual(1, checkout.QueueCount);
+                Assert.AreEqual(0, checkout.PendingRevenue);
+                Assert.AreEqual(0, checkout.LostGoods.Count);
+                Assert.IsTrue(saves.TryLoadV2(savePath, out var loadError), loadError);
+                var restored = pool.Customers.Single(customer => customer.StableId == beforeId);
+                yield return Await(() => restored.IsReadyForCheckout, "Save v2 customer did not rejoin queue.");
+                Assert.AreEqual(1, restored.Cart.TotalCount);
+                Assert.IsNotNull(restored.CurrentOrder);
+                Assert.AreEqual(1, checkout.QueueCount);
+                Assert.AreEqual(11, shelf.AvailableCount);
+                Assert.AreEqual(0, checkout.PendingRevenue);
+                Assert.AreEqual(0, checkout.LostGoods.Count);
+            }
+            finally { if (File.Exists(savePath)) File.Delete(savePath); }
+        }
     }
 }

@@ -66,6 +66,17 @@ namespace TYCOON
             return true;
         }
 
+        public bool RestoreCustomerReservation(CustomerAgent customer, int quantity)
+        {
+            if (customer == null || quantity < 1 || product == null ||
+                customer.Cart.GetCount(product) < quantity || returnReservations.ContainsKey(customer) ||
+                reservedReturns > Store.Inventory.Capacity - quantity)
+                return false;
+            returnReservations.Add(customer, quantity);
+            reservedReturns += quantity;
+            return true;
+        }
+
         public void CompletePurchase(CustomerAgent customer)
         {
             if (customer == null || !returnReservations.TryGetValue(customer, out var quantity)) return;

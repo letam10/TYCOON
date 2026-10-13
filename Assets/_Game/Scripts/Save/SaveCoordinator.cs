@@ -70,15 +70,37 @@ namespace TYCOON
             if (automaticSaving && initialized && CanSave) TrySave(out _);
         }
 
-        public bool TryCapture(out GameSaveData data, out string error)
+        public bool TryCapture(out GameSaveData data, out string error) =>
+            TryCaptureWorld(false, out data, out error);
+
+        public bool TryCaptureV2(out GameSaveDataV2 data, out string error)
         {
-            data = null; error = null;
+            data = null;
+            error = null;
+            try
+            {
+                if (!TryCaptureWorld(true, out var world, out error)) return false;
+                var definitions = Definitions();
+                var orders = World<CustomerAgent>()
+                    .Where(customer => customer.isActiveAndEnabled && customer.CurrentOrder != null)
+                    .OrderBy(customer => customer.StableId, StringComparer.Ordinal)
+                    .Select(customer => customer.CaptureOrderSnapshot()).ToArray();
+                data = new GameSaveDataV2 { world = world, orders = orders };
+                return GameSaveDataV2Validation.TryValidate(data, definitions, out error);
+            }
+            catch (Exception exception) when (exception is ArgumentException || exception is InvalidOperationException)
+            { error = exception.Message; data = null; return false; }
+        }
+
+        private bool TryCaptureWorld(bool allowCustomerOrders, out GameSaveData data, out string error)
+        {
+            data = null;
+            error = null;
             try
             {
                 var definitions = Definitions();
                 var inventories = Inventories();
-                // Save v1 chưa có OrderState; chặn ghi để không hoàn hàng khách về kệ.
-                if (World<CustomerAgent>().Any(customer => customer.HasUnsettledGoods))
+                if (!allowCustomerOrders && World<CustomerAgent>().Any(customer => customer.HasUnsettledGoods))
                     throw new InvalidOperationException("Save v1 cannot capture while a customer holds goods; finish or fail the order first.");
                 var projected = inventories.ToDictionary(pair => pair.Key, pair =>
                 {
@@ -118,6 +140,18 @@ namespace TYCOON
             return true;
         }
 
+        public bool TrySaveV2(string path, out string error)
+        {
+            error = null;
+            if (!CanSave) return Fail("Saving is blocked until the existing save is loaded successfully.", out error);
+            if (!TryCaptureV2(out var data, out error)) return Fail(error, out error);
+            try { JsonSaveV2Store.Save(path, data, Definitions()); }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is ArgumentException)
+            { return Fail(exception.Message, out error); }
+            LastError = null; LastStatus = "Saved v2";
+            return true;
+        }
+
         public bool TryLoad(out string error)
         {
             if (!JsonSaveStore.TryLoad(SavePath, out var data, out error))
@@ -145,28 +179,7 @@ namespace TYCOON
             restoring = true;
             try
             {
-                var definitions = Definitions();
-                var inventoryStates = data.inventories.ToDictionary(value => value.inventoryId, StringComparer.Ordinal);
-                session.Wallet.TryLoadSnapshot(data.wallet);
-                session.TryRestoreState(progress);
-                foreach (var store in World<InventoryStore>()) store.Inventory.TryLoadSnapshot(inventoryStates[store.StableId], definitions);
-                foreach (var worker in World<WorkerAgent>()) worker.TryRestoreInventory(inventoryStates[worker.StableId], definitions);
-                var machines = data.production.ToDictionary(value => value.machineId, StringComparer.Ordinal);
-                foreach (var machine in World<ProductionMachine>()) machine.TryRestoreState(machines[machine.StableId]);
-                var checkouts = data.checkouts.ToDictionary(value => value.checkoutId, StringComparer.Ordinal);
-                foreach (var checkout in World<CheckoutStation>()) checkout.TryRestoreState(checkouts[checkout.StableId]);
-                var harvests = data.harvests.ToDictionary(value => value.nodeId, StringComparer.Ordinal);
-                foreach (var node in World<HarvestNode>()) node.RestoreProgress(harvests[node.StableId].elapsedSeconds);
-                if (player != null && data.player.hasPosition)
-                {
-                    var controller = player.GetComponent<CharacterController>();
-                    bool enabledBefore = controller != null && controller.enabled;
-                    if (enabledBefore) controller.enabled = false;
-                    player.SetPositionAndRotation(new Vector3(data.player.x, data.player.y, data.player.z), Quaternion.Euler(0, data.player.yaw, 0));
-                    if (enabledBefore) controller.enabled = true;
-                    Physics.SyncTransforms();
-                    foreach (var camera in World<SmoothFollowCamera>()) camera.SnapToTarget();
-                }
+                RestoreWorldState(data, progress, Definitions());
                 writesBlocked = false; queued = false; LastError = null; LastStatus = "Loaded";
                 return true;
             }
@@ -175,6 +188,78 @@ namespace TYCOON
                 restoring = false;
                 foreach (var pool in pools) pool.ResumeSpawning();
             }
+        }
+
+        public bool TryLoadV2(string path, out string error)
+        {
+            error = null;
+            var definitions = Definitions();
+            if (!JsonSaveV2Store.TryLoad(path, definitions, out var data, out error))
+            {
+                if (File.Exists(path)) writesBlocked = true;
+                return Fail(error, out error);
+            }
+            if (!ValidateWorld(data.world, out var progress, out error))
+            { writesBlocked = true; return Fail(error, out error); }
+
+            var pools = World<CustomerPool>();
+            foreach (var pool in pools)
+                if (!pool.PrepareForRestore())
+                    return Fail("Customer pool could not be prepared for Save v2 restore.", out error);
+            restoring = true;
+            try
+            {
+                RestoreWorldState(data.world, progress, definitions);
+                var ordered = data.orders
+                    .OrderBy(value => value.queueIndex < 0 ? int.MaxValue : value.queueIndex)
+                    .ThenBy(value => value.customerId, StringComparer.Ordinal)
+                    .ToArray();
+                foreach (var snapshot in ordered)
+                {
+                    var restored = false;
+                    foreach (var pool in pools)
+                        if (pool.TryRestoreCustomer(snapshot, definitions)) { restored = true; break; }
+                    if (!restored)
+                        return Fail("Save v2 customer cannot be restored: " + snapshot.customerId, out error);
+                }
+                writesBlocked = false; queued = false; LastError = null; LastStatus = "Loaded v2";
+                return true;
+            }
+            finally
+            {
+                restoring = false;
+                foreach (var pool in pools) pool.ResumeSpawning();
+            }
+        }
+
+        private void RestoreWorldState(GameSaveData data, ProgressionState progress,
+            IReadOnlyDictionary<string, ItemDefinition> definitions)
+        {
+            var inventoryStates = data.inventories.ToDictionary(value => value.inventoryId, StringComparer.Ordinal);
+            session.Wallet.TryLoadSnapshot(data.wallet);
+            session.TryRestoreState(progress);
+            foreach (var store in World<InventoryStore>())
+                store.Inventory.TryLoadSnapshot(inventoryStates[store.StableId], definitions);
+            foreach (var worker in World<WorkerAgent>())
+                worker.TryRestoreInventory(inventoryStates[worker.StableId], definitions);
+            var machines = data.production.ToDictionary(value => value.machineId, StringComparer.Ordinal);
+            foreach (var machine in World<ProductionMachine>())
+                machine.TryRestoreState(machines[machine.StableId]);
+            var checkouts = data.checkouts.ToDictionary(value => value.checkoutId, StringComparer.Ordinal);
+            foreach (var checkout in World<CheckoutStation>())
+                checkout.TryRestoreState(checkouts[checkout.StableId]);
+            var harvests = data.harvests.ToDictionary(value => value.nodeId, StringComparer.Ordinal);
+            foreach (var node in World<HarvestNode>())
+                node.RestoreProgress(harvests[node.StableId].elapsedSeconds);
+            if (player == null || !data.player.hasPosition) return;
+            var controller = player.GetComponent<CharacterController>();
+            bool enabledBefore = controller != null && controller.enabled;
+            if (enabledBefore) controller.enabled = false;
+            player.SetPositionAndRotation(new Vector3(data.player.x, data.player.y, data.player.z),
+                Quaternion.Euler(0, data.player.yaw, 0));
+            if (enabledBefore) controller.enabled = true;
+            Physics.SyncTransforms();
+            foreach (var camera in World<SmoothFollowCamera>()) camera.SnapToTarget();
         }
 
         private bool ValidateWorld(GameSaveData data, out ProgressionState progress, out string error)

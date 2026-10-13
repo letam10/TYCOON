@@ -10,6 +10,7 @@ namespace TYCOON
     [RequireComponent(typeof(NavMeshAgent))]
     public sealed class CustomerAgent : MonoBehaviour
     {
+        [SerializeField] private string stableId;
         [SerializeField] private Shelf[] shelves = Array.Empty<Shelf>();
         [SerializeField] private CheckoutStation checkout;
         [SerializeField] private Transform entrance;
@@ -29,6 +30,8 @@ namespace TYCOON
         public ItemInventory Cart => cart ?? (cart = new ItemInventory(1));
         public Shelf SourceShelf => selectedShelf;
         public CustomerState State { get; private set; } = CustomerState.Spawn;
+        public string StableId => stableId;
+        public string GetEntityId() => stableId;
         public string VisitId { get; private set; }
         public bool PaymentComplete { get; private set; }
         public OrderState CurrentOrder => order;
@@ -38,10 +41,70 @@ namespace TYCOON
         public bool IsReadyForCheckout => visiting && State == CustomerState.Queue && queueReady && checkout != null &&
             checkout.QueueIndex(this) == 0 && (transform.position - checkout.GetQueuePosition(this)).sqrMagnitude <= 0.25f;
 
-        public void Configure(Shelf[] shopShelves, CheckoutStation station, Transform shopEntrance, Transform shopExit)
+        public CustomerOrderSnapshot CaptureOrderSnapshot()
+        {
+            if (!visiting || order == null || !TYCOON.StableId.IsValid(stableId) || !TYCOON.StableId.IsValid(VisitId))
+                throw new InvalidOperationException("Customer has no active order to save.");
+            return new CustomerOrderSnapshot
+            {
+                customerId = stableId,
+                visitId = VisitId,
+                state = State,
+                paymentComplete = PaymentComplete,
+                sourceShelfId = selectedShelf == null ? null : selectedShelf.Store.StableId,
+                queueIndex = checkout == null ? -1 : checkout.QueueIndex(this),
+                x = transform.position.x,
+                y = transform.position.y,
+                z = transform.position.z,
+                yaw = transform.eulerAngles.y,
+                order = order.Capture(),
+                cart = Cart.CreateSnapshot(stableId + ".cart")
+            };
+        }
+
+        public bool TryRestoreOrderSnapshot(CustomerOrderSnapshot snapshot,
+            IReadOnlyDictionary<string, ItemDefinition> definitions, Action<CustomerAgent> onReturnToPool)
+        {
+            if (snapshot == null || definitions == null || visiting || snapshot.customerId != stableId ||
+                !TYCOON.StableId.IsValid(snapshot.visitId) || snapshot.cart == null ||
+                snapshot.cart.inventoryId != stableId + ".cart" ||
+                snapshot.order == null || snapshot.order.customerId != stableId ||
+                checkout == null || snapshot.order.checkoutId != checkout.StableId ||
+                !Enum.IsDefined(typeof(CustomerState), snapshot.state))
+                return false;
+            if (!OrderState.TryRestore(snapshot.order, definitions, out var restored) ||
+                !Cart.TryLoadSnapshot(snapshot.cart, definitions))
+                return false;
+            selectedShelf = null;
+            if (!string.IsNullOrWhiteSpace(snapshot.sourceShelfId))
+            {
+                foreach (var shelf in shelves)
+                    if (shelf != null && shelf.Store.StableId == snapshot.sourceShelfId) { selectedShelf = shelf; break; }
+                if (selectedShelf == null) return false;
+                var held = selectedShelf.Product == null ? 0 : Cart.GetCount(selectedShelf.Product);
+                if (held > 0 && !selectedShelf.RestoreCustomerReservation(this, held)) return false;
+            }
+            movement = new AgentNavigation(GetComponent<NavMeshAgent>());
+            returnToPool = onReturnToPool;
+            VisitId = snapshot.visitId;
+            order = restored;
+            PaymentComplete = snapshot.paymentComplete;
+            queueReady = false;
+            visiting = true;
+            SetState(snapshot.state);
+            return true;
+        }
+
+        public void Configure(Shelf[] shopShelves, CheckoutStation station, Transform shopEntrance, Transform shopExit,
+            string id = null)
         {
             if (station == null || shopEntrance == null || shopExit == null) throw new ArgumentException("Customer needs checkout, entrance and exit.");
             if (visiting) throw new InvalidOperationException("Cannot configure a customer during a visit.");
+            var configuredId = id ?? stableId;
+            if (!TYCOON.StableId.IsValid(configuredId))
+                configuredId = "customer." + gameObject.name.Replace(" ", ".").ToLowerInvariant();
+            if (!TYCOON.StableId.IsValid(configuredId)) throw new ArgumentException("Customer requires a stable ID.");
+            stableId = configuredId;
             shelves = shopShelves == null ? Array.Empty<Shelf>() : (Shelf[])shopShelves.Clone();
             checkout = station;
             entrance = shopEntrance;
@@ -139,7 +202,7 @@ namespace TYCOON
                 var shelf = shelves[(first + offset) % shelves.Length];
                 if (shelf == null || !shelf.isActiveAndEnabled || shelf.AvailableCount == 0) continue;
                 selectedShelf = shelf;
-                order = new OrderState(VisitId + ".order", VisitId, checkout.StableId,
+                order = new OrderState(VisitId + ".order", stableId, checkout.StableId,
                     new[] { new OrderLineSpec(shelf.Product, 1) });
                 SetState(CustomerState.GoToShelf);
                 return;
@@ -186,6 +249,20 @@ namespace TYCOON
             foreach (var stack in stacks) GoodsLost?.Invoke(this, stack.Item, stack.Quantity);
             if (checkout != null) checkout.RecordCustomerLoss(Cart);
             else Cart.Clear();
+        }
+
+        internal void PrepareForRestore()
+        {
+            checkout?.Leave(this);
+            selectedShelf?.CompletePurchase(this);
+            movement?.Stop();
+            Cart.Clear();
+            selectedShelf = null;
+            order = null;
+            PaymentComplete = false;
+            queueReady = false;
+            visiting = false;
+            returnToPool = null;
         }
 
         private void EndVisit()

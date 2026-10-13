@@ -16,6 +16,10 @@ namespace TYCOON
     public sealed class CustomerOrderSnapshot
     {
         public string customerId;
+        public string visitId;
+        public CustomerState state;
+        public bool paymentComplete;
+        public string sourceShelfId;
         public int queueIndex = -1;
         public float x, y, z, yaw;
         public OrderStateSnapshot order;
