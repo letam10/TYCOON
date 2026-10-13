@@ -22,6 +22,7 @@ namespace TYCOON
         private float retrySeconds;
         private bool queueReady;
         private bool visiting;
+        private OrderState order;
         public event Action<CustomerState> StateChanged;
         public event Action Paid;
         public event Action<CustomerAgent, ItemDefinition, int> GoodsLost;
@@ -30,7 +31,10 @@ namespace TYCOON
         public CustomerState State { get; private set; } = CustomerState.Spawn;
         public string VisitId { get; private set; }
         public bool PaymentComplete { get; private set; }
+        public OrderState CurrentOrder => order;
+        public float PatienceRemaining => order == null ? 0f : order.PatienceRemaining;
         public bool HasUnsettledGoods => Cart.TotalCount > 0;
+        internal bool CanCompletePayment => order == null || order.IsComplete;
         public bool IsReadyForCheckout => visiting && State == CustomerState.Queue && queueReady && checkout != null &&
             checkout.QueueIndex(this) == 0 && (transform.position - checkout.GetQueuePosition(this)).sqrMagnitude <= 0.25f;
 
@@ -57,6 +61,7 @@ namespace TYCOON
             returnToPool = onReturnToPool;
             selectedShelf = null;
             PaymentComplete = false;
+            order = null;
             queueReady = false;
             visiting = true;
             VisitId = Guid.NewGuid().ToString("N");
@@ -68,6 +73,13 @@ namespace TYCOON
         public void Tick(float seconds)
         {
             if (!visiting || seconds < 0f) return;
+            if (State == CustomerState.Queue && order != null && order.Tick(seconds))
+            {
+                checkout?.Leave(this);
+                queueReady = false;
+                SetState(CustomerState.Exit);
+                return;
+            }
             if (State == CustomerState.Blocked)
             {
                 retrySeconds -= seconds;
@@ -88,11 +100,23 @@ namespace TYCOON
                     else if (MoveTo(selectedShelf.ApproachPoint.position)) SetState(CustomerState.TakeProduct);
                     break;
                 case CustomerState.TakeProduct:
-                    if (selectedShelf != null && selectedShelf.TryTakeForCustomer(this)) SetState(CustomerState.FindCheckout);
+                    if (selectedShelf != null && selectedShelf.TryTakeForCustomer(this))
+                    {
+                        if (order == null || !order.TryDeliver(selectedShelf.Product, 1))
+                        {
+                            AbandonHeldGoods();
+                            selectedShelf.AbandonCustomer(this);
+                            SetState(CustomerState.Exit);
+                        }
+                        else SetState(CustomerState.FindCheckout);
+                    }
                     else SetState(CustomerState.SelectProduct);
                     break;
                 case CustomerState.FindCheckout:
-                    if (checkout != null && checkout.isActiveAndEnabled && checkout.TryJoin(this)) SetState(CustomerState.Queue);
+                    if (checkout != null && checkout.isActiveAndEnabled && checkout.TryJoin(this))
+                    {
+                        SetState(CustomerState.Queue);
+                    }
                     else if (checkout == null || !checkout.isActiveAndEnabled) CancelVisit();
                     break;
                 case CustomerState.Queue:
@@ -115,6 +139,8 @@ namespace TYCOON
                 var shelf = shelves[(first + offset) % shelves.Length];
                 if (shelf == null || !shelf.isActiveAndEnabled || shelf.AvailableCount == 0) continue;
                 selectedShelf = shelf;
+                order = new OrderState(VisitId + ".order", VisitId, checkout.StableId,
+                    new[] { new OrderLineSpec(shelf.Product, 1) });
                 SetState(CustomerState.GoToShelf);
                 return;
             }
@@ -134,6 +160,7 @@ namespace TYCOON
         internal void CompletePayment()
         {
             selectedShelf?.CompletePurchase(this);
+            order?.TryCompletePayment();
             PaymentComplete = true;
             queueReady = false;
             movement.Stop();
@@ -153,6 +180,7 @@ namespace TYCOON
 
         public void AbandonHeldGoods()
         {
+            order?.Fail();
             if (Cart.TotalCount == 0) return;
             var stacks = new List<ItemStack>(Cart.Stacks);
             foreach (var stack in stacks) GoodsLost?.Invoke(this, stack.Item, stack.Quantity);

@@ -2,30 +2,28 @@
 
 ## Công đoạn vừa hoàn thành
 
-**Công đoạn 01 — Audit và baseline.** Đã rà soát ownership của item, inventory/store, customer/order, checkout/payment/cash, machine, purchase/unlock, save/load, NPC navigation, upgrade, worker và interaction. Các luồng prototype mâu thuẫn đã được chặn hoặc thay bằng transaction có owner rõ ràng.
+**Audit baseline và order transaction foundation.** Baseline ownership của item, inventory/store, checkout/payment/cash, machine, purchase/unlock, save/load, worker và interaction vẫn giữ nguyên. Customer order hiện có state giao dịch riêng để tránh thanh toán hoặc thất thoát lặp.
 
 ## Hệ thống và file chính đã thay đổi
 
-- `ItemInventory` giữ primitive inventory hiện có và có thao tác `Clear` nguyên tử.
-- `CheckoutLedger` ghi thất thoát theo stable item ID, giữ pending cash và receipt/sale idempotency.
-- `CustomerAgent`, `Shelf`, `CheckoutStation` không hoàn hàng khách đã cầm khi hủy hoặc hết kiên nhẫn; hàng bị mất được ghi vào ledger.
-- `SaveCoordinator` không còn chiếu cart khách ngược về shelf. Save v1 từ chối capture/load khi khách còn giữ hàng để tránh mất ownership hoặc hoàn hàng ngầm.
-- `ProductionMachine` không còn tự `Tick` khi chỉ bật component. Máy chỉ chạy khi có operator token; player và `ProcessorJob` dùng cùng cơ chế reservation/operation.
-- `MachineInteractionTarget` và `ProximityWorkStation` vận hành máy trong vùng thao tác; rời vùng giữ tiến độ và dừng máy.
-- `InventoryStore` có `OwnerScopeId` suy ra từ stable ID/parent và whitelist route nguồn → đích. `RestockerJob` lọc nguồn theo route, không coi toàn bộ output và shelf là một kho global.
-- `GameSession` có `PurchaseProgressState`; `PurchasePad` góp tiền theo thời gian khi player đứng trong trigger, dừng khi rời vùng, lưu phần đã góp và chỉ unlock một lần khi đủ giá.
-- Giữ nguyên stable ID, Input System, pooling, inventory primitives và CLI/editor bridge.
-- Cập nhật focused tests trong `Assets/_Game/Scripts/Tests/Commerce` cho abandonment/loss và save barrier.
+- `OrderState.cs` thêm `OrderStatus`, line yêu cầu/đã giao, giá chốt, patience và snapshot/restore có validation.
+- `CustomerAgent.cs` tạo order tại thời điểm chọn hàng, ghi nhận giao hàng khi lấy từ shelf, giảm patience trong hàng chờ và chuyển order sang thất bại idempotent khi rời hàng.
+- `CheckoutStation.cs` chỉ ghi sale khi order đã giao đủ; payment vẫn qua `CheckoutLedger` và không tự tăng ví.
+- `CustomerFlowTests.cs` thêm case timeout 90 giây: khách giữ phần hàng đã nhận, không thanh toán, ledger ghi loss một lần.
+- `OrderStateTests.cs` kiểm tra giao từng phần, thanh toán một lần, failure terminal và snapshot round trip.
+- Giữ nguyên stable ID, Input System, pooling, inventory primitives, route ownership, machine operator token, purchase progress và CLI/editor bridge.
 
 ## Trạng thái hiện tại
 
 - Unity `6000.6.3f1`, URP `17.6.0`, Windows offline single-player.
-- Compile batch mới nhất: exit `0`, không có `error CS`, `Scripts have compiler errors` hoặc `Compilation failed`.
-- EditMode mới nhất: `53/53` pass.
-- PlayMode scene mới nhất: `56/56` pass.
-- Chưa triển khai thêm nội dung Farm Shop, Processing, Supermarket, Bakery hoặc Restaurant trong công đoạn này; chỉ sửa các luồng prototype để baseline không mâu thuẫn với gameplay mới.
-- Save v1 hiện dùng barrier khi customer còn unsettled; OrderState/CrewState đầy đủ là phạm vi tiếp theo, không được giả lập bằng hoàn hàng.
+- Compile batch mới: exit `0`, không có `error CS`, `Scripts have compiler errors` hoặc `Compilation failed`.
+- EditMode mới: `56/56` pass.
+- PlayMode mới: `57/57` pass.
+- Khách hết patience được ghi thất thoát phần hàng đã nhận; khách nhận đủ chỉ thanh toán một lần.
+- Save v1 vẫn giữ barrier khi customer còn giữ hàng; Save v2 đầy đủ order queue, worker/crew, conveyor, animal và event state vẫn là phạm vi tiếp theo.
+- Chưa triển khai nội dung Farm Shop, Processing, Supermarket, Bakery hoặc Restaurant; scene integration và Windows build chưa được coi là hoàn tất.
+- Các file dirty/untracked có trước trong worktree được giữ nguyên và không đưa vào commit của milestone này.
 
 ## Commit và push GitHub
 
-Đã commit với thông điệp `baseline: enforce ownership and operator transactions` và push lên `origin/main`. Sau push, `git ls-remote origin refs/heads/main` đã được đối chiếu và trùng `HEAD`.
+Đã commit milestone order transaction và push lên `origin/main`. Sau push, `git rev-parse HEAD` và `git ls-remote origin refs/heads/main` phải trùng; các thay đổi ngoài danh sách milestone không được stage.

@@ -62,6 +62,7 @@ namespace TYCOON
             while (queue.Count > 0 && (queue[0] == null || !queue[0].isActiveAndEnabled)) queue.RemoveAt(0);
             if (queue.Count == 0 || !queue[0].IsReadyForCheckout) return false;
             var customer = queue[0];
+            if (!customer.CanCompletePayment) return false;
             if (!ledger.TryCompleteSale(customer.VisitId, customer.Cart, out _)) return false;
             queue.RemoveAt(0);
             customer.CompletePayment();

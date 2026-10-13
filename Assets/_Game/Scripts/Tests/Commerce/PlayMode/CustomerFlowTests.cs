@@ -127,6 +127,23 @@ namespace TYCOON.Tests
         }
 
         [UnityTest]
+        public IEnumerator CustomerTimeoutRecordsHeldGoodsAsLossWithoutPayment()
+        {
+            var customer = Customer("TimeoutCustomer", true);
+            var returned = false;
+            customer.BeginVisit(actor => { returned = true; actor.gameObject.SetActive(false); });
+            yield return Await(() => customer.IsReadyForCheckout, "Customer did not reach queue head.");
+            Assert.AreEqual(1, customer.Cart.TotalCount);
+            customer.Tick(90f);
+            yield return Await(() => returned, "Timed out customer did not exit.");
+            Assert.IsFalse(customer.PaymentComplete);
+            Assert.AreEqual(0, customer.Cart.TotalCount);
+            Assert.AreEqual(11, shelf.AvailableCount);
+            Assert.AreEqual(0, checkout.PendingRevenue);
+            Assert.AreEqual(1, checkout.LostGoods[carrot.Id]);
+        }
+
+        [UnityTest]
         public IEnumerator PoolSaveBarrierAbandonsCartsAndReusesTheSameInstances()
         {
             var template = Customer("CustomerTemplate", false);
