@@ -26,4 +26,4 @@
 
 ## Commit và push GitHub
 
-Milestone commit `36611e2` đã được push lên `origin/main`; local HEAD và remote đã khớp tại thời điểm push. Handoff update này sẽ được commit riêng ngay sau đó. Không có file ngoài danh sách milestone được stage.
+Milestone commit `36611e2` đã được push lên `origin/main`; local HEAD và remote đã khớp tại thời điểm push. Handoff update đã được commit trong `33348d0` và push lên `origin/main`; local HEAD và remote đã được đối chiếu khớp. Không có file ngoài danh sách milestone được stage.
