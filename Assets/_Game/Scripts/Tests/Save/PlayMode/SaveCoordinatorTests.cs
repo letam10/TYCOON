@@ -114,6 +114,27 @@ namespace TYCOON.Tests
         }
 
         [Test]
+        public void PendingPurchaseContributionSurvivesSaveAndLoad()
+        {
+            var upgrade = Asset<UpgradeDefinition>();
+            upgrade.Configure("unlock.market", "Market", 80);
+            Assert.IsTrue(session.TryContributePurchase(upgrade, 30, out var failure), failure.ToString());
+            Assert.AreEqual(30, session.GetPurchaseContribution(upgrade.StableId));
+            Assert.AreEqual(70, session.Wallet.Balance);
+
+            Assert.IsTrue(saves.TrySave(out var error), error);
+            Assert.IsTrue(session.TryContributePurchase(upgrade, 20, out failure), failure.ToString());
+            Assert.AreEqual(50, session.GetPurchaseContribution(upgrade.StableId));
+            Assert.AreEqual(50, session.Wallet.Balance);
+
+            Assert.IsTrue(saves.TryLoad(out error), error);
+            Assert.AreEqual(30, session.GetPurchaseContribution(upgrade.StableId));
+            Assert.AreEqual(70, session.Wallet.Balance);
+            Assert.AreEqual(0, session.GetUpgradeLevel(upgrade.StableId));
+            Assert.IsFalse(session.HasUnlock(upgrade.StableId));
+        }
+
+        [Test]
         public void PendingCashSurvivesSaveAndCanOnlyBeCollectedOnce()
         {
             var ledger = new CheckoutLedger();

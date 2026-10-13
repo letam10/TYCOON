@@ -106,20 +106,24 @@ namespace TYCOON
                         failure = PurchaseFailure.PrerequisiteMissing;
                         break;
                     }
-                if (failure == PurchaseFailure.None && Wallet.Balance < definition.CostAtLevel(GetUpgradeLevel(definition.StableId)))
+                int level = GetUpgradeLevel(definition.StableId);
+                int remaining = Mathf.Max(0, definition.CostAtLevel(level) - GetPurchaseContribution(definition.StableId));
+                if (failure == PurchaseFailure.None && Wallet.Balance < remaining)
                     failure = PurchaseFailure.InsufficientMoney;
             }
             return failure == PurchaseFailure.None;
         }
 
-        public bool TryPurchase(UpgradeDefinition definition, out PurchaseFailure failure)
-        {
-            return TryContributePurchase(definition, int.MaxValue, out failure);
-        }
+        public bool TryPurchase(UpgradeDefinition definition, out PurchaseFailure failure) =>
+            TryContributePurchase(definition, int.MaxValue, out failure, false);
 
-        public bool TryContributePurchase(UpgradeDefinition definition, int requestedAmount, out PurchaseFailure failure)
+        public bool TryContributePurchase(UpgradeDefinition definition, int requestedAmount, out PurchaseFailure failure) =>
+            TryContributePurchase(definition, requestedAmount, out failure, true);
+
+        private bool TryContributePurchase(UpgradeDefinition definition, int requestedAmount,
+            out PurchaseFailure failure, bool allowPartial)
         {
-            if (!CanPurchase(definition, out failure)) return false;
+            if (!CanPurchase(definition, allowPartial, out failure)) return false;
             if (requestedAmount < 1) requestedAmount = 1;
             int level = GetUpgradeLevel(definition.StableId);
             int totalCost = definition.CostAtLevel(level);
@@ -159,6 +163,30 @@ namespace TYCOON
             failure = PurchaseFailure.None;
             Changed?.Invoke();
             return true;
+        }
+
+        private bool CanPurchase(UpgradeDefinition definition, bool allowPartial, out PurchaseFailure failure)
+        {
+            failure = PurchaseFailure.None;
+            if (purchasing) failure = PurchaseFailure.Busy;
+            else if (definition == null || !definition.IsValid) failure = PurchaseFailure.InvalidUpgrade;
+            else if (GetUpgradeLevel(definition.StableId) >= definition.MaxLevel) failure = PurchaseFailure.AlreadyPurchased;
+            else if (stage < definition.RequiredStage) failure = PurchaseFailure.StageLocked;
+            else
+            {
+                foreach (string id in definition.PrerequisiteIds)
+                    if (!HasUnlock(id) && !HasEmployee(id))
+                    {
+                        failure = PurchaseFailure.PrerequisiteMissing;
+                        break;
+                    }
+                int level = GetUpgradeLevel(definition.StableId);
+                int remaining = Mathf.Max(0, definition.CostAtLevel(level) - GetPurchaseContribution(definition.StableId));
+                int minimum = allowPartial ? (remaining > 0 ? 1 : 0) : remaining;
+                if (failure == PurchaseFailure.None && Wallet.Balance < minimum)
+                    failure = PurchaseFailure.InsufficientMoney;
+            }
+            return failure == PurchaseFailure.None;
         }
 
         public ProgressionState CaptureState()

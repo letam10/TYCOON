@@ -10,6 +10,8 @@ namespace TYCOON
         public WalletSnapshot wallet = new WalletSnapshot { completedSaleIds = Array.Empty<string>() };
         public InventorySnapshot[] inventories = Array.Empty<InventorySnapshot>();
         public UpgradeSnapshot[] upgrades = Array.Empty<UpgradeSnapshot>();
+        // Chỉ chứa các khoản góp dở; upgrade hoàn tất được biểu diễn bởi levels/unlocks.
+        public PurchaseProgressState[] purchaseProgress = Array.Empty<PurchaseProgressState>();
         public string[] unlocks = Array.Empty<string>();
         public string businessStageId = "farm";
         public string[] employeeUnlocks = Array.Empty<string>();

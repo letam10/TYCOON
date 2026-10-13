@@ -115,6 +115,7 @@ namespace TYCOON
                     wallet = session.Wallet.CreateSnapshot(), businessStageId = progress.stage.ToString().ToLowerInvariant(),
                     unlocks = progress.unlockedIds, employeeUnlocks = progress.employeeIds,
                     upgrades = progress.upgradeLevels.Select(value => new UpgradeSnapshot { upgradeId = value.upgradeId, level = value.level }).ToArray(),
+                    purchaseProgress = progress.purchaseProgress ?? Array.Empty<PurchaseProgressState>(),
                     inventories = projected.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value.CreateSnapshot(pair.Key)).ToArray(),
                     production = World<ProductionMachine>().Select(machine => machine.CaptureState()).ToArray(),
                     checkouts = World<CheckoutStation>().Select(checkout => checkout.CaptureLedgerState()).ToArray(),
@@ -271,7 +272,8 @@ namespace TYCOON
                 if (!Enum.TryParse(data.businessStageId, true, out BusinessStage stage))
                     return Fail("Unknown business stage.", out error);
                 progress = new ProgressionState { stage = stage, unlockedIds = data.unlocks, employeeIds = data.employeeUnlocks,
-                    upgradeLevels = data.upgrades.Select(value => new UpgradeLevelState(value.upgradeId, value.level)).ToArray() };
+                    upgradeLevels = data.upgrades.Select(value => new UpgradeLevelState(value.upgradeId, value.level)).ToArray(),
+                    purchaseProgress = data.purchaseProgress ?? Array.Empty<PurchaseProgressState>() };
                 if (!GameSession.IsValidState(progress)) return Fail("Invalid progression state.", out error);
                 var definitions = Definitions();
                 var inventories = Inventories();

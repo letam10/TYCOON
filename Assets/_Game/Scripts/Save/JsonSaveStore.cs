@@ -49,7 +49,7 @@ namespace TYCOON
                 {
                     version = 0, wallet = null, inventories = null, upgrades = null, unlocks = null,
                     businessStageId = null, employeeUnlocks = null, production = null, checkouts = null,
-                    harvests = null, player = null
+                    harvests = null, player = null, purchaseProgress = null
                 };
                 JsonUtility.FromJsonOverwrite(json, candidate);
                 if (!TryValidate(candidate, out error)) return false;
@@ -84,6 +84,15 @@ namespace TYCOON
                 if (upgrade == null || !StableId.IsValid(upgrade.upgradeId) || upgrade.level < 0 || !upgradeIds.Add(upgrade.upgradeId))
                 { error = "Invalid or duplicate upgrade."; return false; }
             if (!TryValidateIds(data.unlocks, out error) || !TryValidateIds(data.employeeUnlocks, out error)) return false;
+            if (data.purchaseProgress != null)
+            {
+                var purchaseIds = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var purchase in data.purchaseProgress)
+                    if (!StableId.IsValid(purchase.upgradeId) || !purchaseIds.Add(purchase.upgradeId) ||
+                        purchase.totalCost < 1 || purchase.contributed < 1 ||
+                        purchase.contributed > purchase.totalCost || purchase.completed)
+                    { error = "Invalid or duplicate purchase progress."; return false; }
+            }
             var machineIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var machine in data.production)
                 if (!StableId.IsValid(machine.machineId) || !StableId.IsValid(machine.recipeId) ||
